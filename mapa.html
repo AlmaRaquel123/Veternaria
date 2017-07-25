@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" type="text/css" href="css/jquery.mobile-1.4.5.min.css">
+    <meta charset="utf-8">
+    <script type="text/javascript" src="js/jquery.js"></script> 
+    <script type="text/javascript" src="js/jquery.mobile-1.4.5.min.js"></script>
+    <title>Simple markers</title>
+    <style>
+
+      html, body {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      #map-page, #map-canvas { width: 100%; height: 100%; padding: 0; }
+      #content {
+    padding: 0;
+    position : absolute !important; 
+    top : 40px !important;  
+    right : 0; 
+    bottom : 40px !important;  
+    left : 0 !important;     
+}
+ #ui-content {
+    padding: 0;
+    position : absolute !important; 
+    top : 40px !important;  
+    right : 0; 
+    bottom : 40px !important;  
+    left : 0 !important;     
+}
+    </style>
+  </head>
+  <body>
+
+    <!--input type="button" id="btnObtCordenadas" data-nobackbtn="true" value="Dibujar mapa" -->
+      <!--input type="button" id="btnObtCordenadas" data-nobackbtn="true" value="Dibujar mapa" onclick="initMap()"-->
+    <!--a  href="index.html" >Regresar</a-->
+    <!--div id="map"></div-->
+<div data-role="page" id="map-page" data-url="map-page">
+    <div data-role="header" data-theme="a">
+    <h1>Maps</h1>
+    </div>
+    <div role="main" class="ui-content" data-role="content" id="map-canvas">
+        <!-- map loads here... -->
+    </div>
+</div>
+
+    <!--script>
+   $(document).on("pageinit","mapa.html" function(e,data) {
+
+  alert("inicializacion");
+      $("#btnObtCordenadas").click(function(){
+        alert("Event boton");
+        var myLatLng = {lat: 19.4599007, lng: -97.6742774};
+
+        var map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 14,
+          center: myLatLng
+        });
+
+        var marker = new google.maps.Marker({
+          position: myLatLng,
+          map: map,
+          title: 'Hello World!'
+        });
+      });
+
+    }
+
+      function initMap() {
+        var myLatLng = {lat: 19.4599007, lng: -97.6742774};
+
+        var map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 14,
+          center: myLatLng
+        });
+
+        var marker = new google.maps.Marker({
+          position: myLatLng,
+          map: map,
+          title: 'Hello World!'
+        });
+      }
+    </script-->
+    <script type="text/javascript">
+    $( document ).on( "pageinit", "#map-page", function() {
+      alert("inicializacion");
+    var defaultLatLng = new google.maps.LatLng(34.0983425, -118.3267434);  // Default to Hollywood, CA when no geolocation support
+    if ( navigator.geolocation ) {
+        function success(pos) {
+            // Location found, show map with these coordinates
+            drawMap(new google.maps.LatLng(pos.coords.latitude, pos.coords.longitude));
+        }
+        function fail(error) {
+            drawMap(defaultLatLng);  // Failed to find location, show default map
+        }
+        // Find the users current position.  Cache the location for 5 minutes, timeout after 6 seconds
+        navigator.geolocation.getCurrentPosition(success, fail, {maximumAge: 500000, enableHighAccuracy:true, timeout: 6000});
+    } else {
+        drawMap(defaultLatLng);  // No geolocation support, show default map
+    }
+    function drawMap(latlng) {
+        var myOptions = {
+            zoom: 10,
+            center: latlng,
+            mapTypeId: google.maps.MapTypeId.ROADMAP
+        };
+        var map = new google.maps.Map(document.getElementById("map-canvas"), myOptions);
+        // Add an overlay to the map of current lat/lng
+        var marker = new google.maps.Marker({
+            position: latlng,
+            map: map,
+            title: "Greetings!"
+        });
+    }
+});
+</script>
+    <!--script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBQrhr37PXlmBIF7sR8BtcrClBqJk84F2s">
+    </script-->
+     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBQrhr37PXlmBIF7sR8BtcrClBqJk84F2s&v=3.exp"></script>
+  </body>
+</html> 

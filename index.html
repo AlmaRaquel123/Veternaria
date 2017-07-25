@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>Document</title>
+	<link rel="stylesheet" type="text/css" href="css/jquery.mobile-1.4.5.min.css">
+	<script src="phonegap.js"></script>
+	<script type="text/javascript" src="js/jquery.js"></script>	
+	<script type="text/javascript" src="js/jquery.mobile-1.4.5.min.js"></script>
+	<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBQrhr37PXlmBIF7sR8BtcrClBqJk84F2s&v=3.exp&"></script>
+
+<script type="text/javascript">
+   
+document.addEventListener("deviceready", onDeviceReady, false);
+function onDeviceReady(){
+
+	//alert("Inicion app");
+	$("#Clasificacion").ready(function(){		  
+		llenarTipoAnimales();
+		llenarcoordenadas();
+	});
+	/*$("#Clasificacion").on('change',function(){	
+alert($("#Clasificacion").val());
+	});*/
+
+var map;
+ var miOptions;
+ var marca;
+ var infoVentanta;
+ var opciones={maximumAge:500000,enableHighAccuracy:true,timeout:5000};	     
+$("#btnConsServMapa").click(function(){
+		//alert("Evtno de boton");
+		var defaultLatLng = new google.maps.LatLng(19.463948, -97.686259);  //ubicación por defecto "Libres, Puebla"
+    if ( navigator.geolocation ) {
+        function success(pos) {
+            // obtiene la ubicación del usuario
+            drawMap(new google.maps.LatLng(pos.coords.latitude, pos.coords.longitude));
+        }
+        function fail(error) {
+            drawMap(defaultLatLng); // Si no hay obtención de cordenadas, se muestra el mapa por defecto
+        }
+        // Busca la ubicación del usuario por 6 segundo
+        navigator.geolocation.getCurrentPosition(success, fail, {maximumAge: 500000, enableHighAccuracy:true, timeout: 6000});
+    } else {
+        drawMap(defaultLatLng);  // Si no hay obtención de cordenadas, se muestra el mapa por defecto
+    }
+	});
+alert("Inicion app");
+function drawMap(latlng) {
+        var myOptions = {
+            zoom: 12,
+            center: latlng,
+            mapTypeId: google.maps.MapTypeId.ROADMAP
+        };
+        map = new google.maps.Map(document.getElementById("map-canvas"), myOptions);
+        obtenerMarcas();	
+        // Se agregar una marca en la ubicación obtenida del dispositivo
+        var marker = new google.maps.Marker({
+            position: latlng,
+            map: map,
+            title: "Usted esta ubicado aqui!"
+        });
+    }
+
+function obtenerMarcas(){
+	      $.ajax({
+		        type:"POST",
+		        url:"ConsultaMasc.php",
+		        data:"",
+		        success: serviciosConsultados
+	      });
+
+        function serviciosConsultados(datos){
+		        var respDatos=$.parseJSON(datos);
+		        for(var i in respDatos){
+		            dibujarMarcas(respDatos[i].Nombre, respDatos[i].Vive, respDatos[i].Sexo, respDatos[i].Precio, respDatos[i].Latitud, respDatos[i].Longitud, respDatos[i].Foto);
+	          }
+	      }
+}
+
+function dibujarMarcas(nombre, viv, sex, tel, lat, lng, ruta){
+  alert("Localizando a la mascota: "+nombre+" Vive: "+viv+" Sexo: "+sex+" tel"+tel+" Lat:"+lat+" Long:"+lng+" ruta: "+ruta );
+  var latlng=new google.maps.LatLng(lat, lng);
+  var marca2=new google.maps.Marker({
+	    position:latlng,
+	    map:map,
+	    title:nombre,
+	    animation:google.maps.Animation.DROP
+	});
+
+	var infoVentanta2=new google.maps.InfoWindow({
+	  position:latlng,
+	  content:'<div style="width:200px; height:160px;"><div style="text-align: center; color:#5c041b; font-weight:bolder; font-size:12px; font-family:arial;">' + nombre + '</div><img src="http://iscitslibres.com/iscmoviles/Alejandro/'+ruta+'" width="90" heigth="60" /><div style="text-align:center; color: #2e20b8; font-size:12px; font-family:arial; width:200px; text-align:center;">' + viv + '</div><div>Tel: ' + tel + '</div><div>Sexo: ' + sex + '</div>'
+	});
+	google.maps.event.addListener(marca2, "click", function(){infoVentanta2.open(map,marca2);});
+}
+//*********** MASCOTAS  *******************
+	$("#btnGuardarMasc").tap(function (){
+			var nom=$("#NombreMasc").val();
+			var vive=$("#ViveMasc").val();
+			var razamas=$("#RazaMasc").val();
+			var colormas=$("#ColorMasc").val();
+			var preciomas=$("#PrecioMasc").val();
+			var fechamas=$("#FechaNas").val();
+			var pedegre=$("#PedegreMasc").val();
+			var sexo=$("#SexoMasc").val();
+			var peso=$("#PesoMasc").val();
+			var descr=$("#DescripMasc").val();
+			var estado=$("#EstMasc").val();
+			var foto="images/"+nom+".jpg";
+			var latitud=$("#Latitud").val();
+			var longitud=$("#Longitud").val();
+			var tipom=$("#Clasificacion").val();
+			//alert("Funciona guardar");								
+			$.ajax({
+				type:"POST",
+				url:"GuardarMasc.php",
+				data:"NomMasc="+nom+"&viveM="+vive+"&RazM="+razamas+"&ColorM="+colormas+"&PrecM="+preciomas+"&FechaM="+fechamas+"&PedM="+pedegre+"&SexoM="+sexo+"&PesM="+peso+"&DesM="+descr+"&EstM="+estado+"&Foto="+foto+"&Latitud="+latitud+"&Longitud="+longitud+"&IDTipo="+tipom,
+				success:function (datos) {
+					alert(datos);
+					llenarcoordenadas();
+					LimpCampos();
+					uploadPhoto($("#regFoto").attr("src"));
+				}
+			});
+		});
+	$("#btnObtCordenadas").tap(function(){//Obtener coordenadas para el registro de servicios			
+  		obtenerUbicacion();
+	});
+	$("#btnObtCordenadasMod").tap(function(){//Obtener coordenadas para el registro de servicios			
+  		obtenerUbicacionMod();
+	});
+
+	$("#btnobtenerFoto").click(function (){
+		alert("Accediendo a camara...");
+	navigator.camera.getPicture(onSuccess, onFail, { quality: 50, destinationType: Camera.DestinationType.FILE_URI });
+	function onSuccess(imageURI) {
+	    var image = document.getElementById('regFoto');
+	    //alert("ruta de la imagen: "+imageURI);
+	    image.src = imageURI;
+	    $("#regFoto").attr("width","100%");
+	}
+	function onFail(message) {
+	    alert('Ocurrio un error al capturar la imagen: ' + message);
+	}
+  	});
+	$("#btnConsultarMasc").tap(function (){
+		//alert("Entro Consultar Mascotas");
+			$.ajax({
+				type:"POST",
+				url:"ConsultaMasc.php",
+				data:"",
+				success:function (datos) {
+					var reg=$.parseJSON(datos);
+					if(reg.length=="0"){
+						alert("No existe ninguna mascota en la BD");
+					}else{
+					var fila=$("#datosTodos");
+					fila.html("");
+					 for(var i in reg){
+					 	fila.append("<tr><td>"+reg[i].ID+"</td><td>"+reg[i].Nombre+"</td><td>"+reg[i].Vive+"</td><td>"+reg[i].Raza+"</td><td>"+reg[i].Color+"</td><td>"+reg[i].Precio+"</td><td>"+reg[i].FNacimineto+"</td><td>"+reg[i].Pedegre+"</td><td>"+reg[i].Sexo+"</td><td>"+reg[i].Peso+"</td><td>"+reg[i].Descripccion+"</td><td>"+reg[i].EsAnimal+"</td><td>"+reg[i].Foto+"</td><td>"+reg[i].Latitud+"</td><td>"+reg[i].Longitud+"</td></tr>");
+					 }
+					$("#mascotas").table("refresh");
+					}
+				}
+			});
+		});
+	$("#btnConsultarIDM").tap(function (){
+		//alert("Consulta ID tipo mascota");
+			var id=$("#txtMascotasID").val();
+			//alert("Id bucando es: "+id);
+			if(id==''){
+				alert("El ID a buscar no es valido.");
+			}else{
+				$.ajax({
+					type:"POST",
+					url:"ConsIDMasc.php",
+					data:"IDM="+id,
+					success:function (datos) {
+						//alert(datos);
+						var reg=$.parseJSON(datos);
+						if(reg.length=="0"){
+							alert("El ID: "+id+" no se encuentra en la BD");
+						}else{
+						var fila=$("#datosTodos");
+						fila.html("");
+						 for(var i in reg){
+						 	fila.append("<tr><td>"+reg[i].ID+"</td><td>"+reg[i].Nombre+"</td><td>"+reg[i].Vive+"</td><td>"+reg[i].Raza+"</td><td>"+reg[i].Color+"</td><td>"+reg[i].Precio+"</td><td>"+reg[i].FNacimineto+"</td><td>"+reg[i].Pedegre+"</td><td>"+reg[i].Sexo+"</td><td>"+reg[i].Peso+"</td><td>"+reg[i].Descripccion+"</td><td>"+reg[i].EsAnimal+"</td><td>"+reg[i].Foto+"</td><td>"+reg[i].Latitud+"</td><td>"+reg[i].Longitud+"</td></tr>");
+						 }
+						$("#mascotas").table("refresh");
+						}
+					}
+				});
+			}
+		});
+	$("#btnConsultarNomM").tap(function (){
+			var NMas=$("#txtNMascotasMod").val();
+			//alert("Buscando a la mascota: "+NMas+".");
+			if(NMas==''){
+				alert("El nombre de la mascota no es valido para consultar");
+			}else{
+			$.ajax({
+				type:"POST",
+				url:"ConsNomMasc.php",
+				data:"NomMas="+NMas,
+				success:function (datos) {
+					var reg=$.parseJSON(datos);
+					if(reg.length=="0"){
+						alert("La mascota "+NMas+" no se encuentra en la BD");
+						$("#ModMasc").css("display","none");
+					}else{
+						alert("Datos encontrados");
+						 $("#ModMasc").css("display","block");
+					 	 $("#IdMasc02").val(reg[0].ID);
+					 	 $("#NombreMasc02").val(reg[0].Nombre);
+					 	 $("#ViveMasc02").val(reg[0].Vive).change();
+					 	 $("#RazaMasc02").val(reg[0].Raza);
+					 	 $("#ColorMasc02").val(reg[0].Color);
+					 	 $("#PrecioMasc02").val(reg[0].Precio);
+					 	 $("#FechaNas02").val(reg[0].FNacimineto);
+					 	 $("#PedegreMasc02").val(reg[0].Pedegre);
+					 	 $("#SexoMasc02").val(reg[0].Sexo).change();
+					 	 $("#PesoMasc02").val(reg[0].Peso);
+					 	 $("#DescripMasc02").val(reg[0].Descripccion);
+					 	 $("#EstMasc02").val(reg[0].EsAnimal);
+					 	 $("#Latitud02").val(reg[0].Latitud);
+					 	 $("#Longitud02").val(reg[0].Longitud);
+					 	 $("#Clasificacion02").val(reg[0].IDTipo).change();
+					}
+				}
+			});
+		}});
+	$("#btnModificarM").tap(function (){
+			var id=$("#IdMasc02").val();
+			var nom=$("#NombreMasc02").val();
+			var vive=$("#ViveMasc02").val();
+			var razamas=$("#RazaMasc02").val();
+			var colormas=$("#ColorMasc02").val();
+			var preciomas=$("#PrecioMasc02").val();
+			var fechamas=$("#FechaNas02").val();
+			var pedegre=$("#PedegreMasc02").val();
+			var sexo=$("#SexoMasc02").val();
+			var peso=$("#PesoMasc02").val();
+			var descr=$("#DescripMasc02").val();
+			var estado=$("#EstMasc02").val();
+			var foto="img/mas01.jpg";
+			var latitud=$("#Latitud02").val();
+			var longitud=$("#Longitud02").val();
+			var tipom=$("#Clasificacion02").val();
+			alert("Funciona actualizar");
+			if(id==''){
+				alert("llenar campos faltantes");
+			}else{	
+				$.ajax({
+					type:"POST",
+					url:"ActualizarMascota.php",
+					data:"IDMasc="+id+"&NomMasc="+nom+"&viveM="+vive+"&RazM="+razamas+"&ColorM="+colormas+"&PrecM="+preciomas+"&FechaM="+fechamas+"&PedM="+pedegre+"&SexoM="+sexo+"&PesM="+peso+"&DesM="+descr+"&EstM="+estado+"&Foto="+foto+"&Latitud="+latitud+"&Longitud="+longitud+"&IDTipo="+tipom,
+					success:function (datos) {
+						alert(datos);
+						LimpCampos02();
+						llenarcoordenadas();
+					}
+				});
+			}
+
+		});
+//******************** TIPO MASCOTAS *************************
+	$("#btnGuardarTipMasc").tap(function (){	
+			var nom=$("#TipoAMasc").val();
+			//alert("Funciona guardarTipoMas");
+			if(nom==''){
+				alert("El tipo de animal no es valido para guardar");
+			}else{								
+				$.ajax({
+					type:"POST",
+					url:"GuarTipoMascota.php",
+					data:"TipoMasc="+nom,
+					success:function (datos) {
+						alert("El tipo de animal: "+datos+" se registro en la BD");
+						$("#TipoAMasc").val("")
+						llenarTipoAnimales();
+					}
+				});
+			}
+		});
+	$("#btnConsultarTipMasc").tap(function (){
+		//alert("Entro Consultar Tipos de animales");
+			$.ajax({
+				type:"POST",
+				url:"ConsultaTipMasc.php",
+				data:"",
+				success:function (datos) {
+					var reg=$.parseJSON(datos);
+					if(reg.length=="0"){
+						alert("No existe ningun tipo de animal en en la BD");
+					}else{
+					var fila=$("#datosTipoTodos");
+					fila.html("");
+					 for(var i in reg){
+					 	fila.append("<tr><td>"+reg[i].IDTipo+"</td><td>"+reg[i].Tipo+"</td></tr>");
+					 }
+					$("#datosTipoMasc").table("refresh");
+					}
+				}
+			});
+		});
+	$("#btnConIDTipoMas").tap(function (){
+		//alert("Consulta ID tipo mascota");
+			var id=$("#txtIDTipoMascotas").val();
+			//alert("Id bucando es: "+id);
+			if(id==''){
+				alert("El ID a buscar no es valido.");
+			}else{
+				$.ajax({
+					type:"POST",
+					url:"ConsIDTipoMasc.php",
+					data:"IDTipM="+id,
+					success:function (datos) {
+						//alert(datos);
+						var reg=$.parseJSON(datos);
+						if(reg.length=="0"){
+							alert("El ID: "+id+" no se encuentra en la BD");
+						}else{
+						var fila=$("#datosTipoTodos");
+						fila.html("");
+						 for(var i in reg){
+						 	fila.append("<tr><td>"+reg[i].IDTipo+"</td><td>"+reg[i].Tipo+"</td></tr>");
+						 }
+						$("#datosTipoMasc").table("refresh");
+						}
+					}
+				});
+			}
+		});
+	$("#btnEliminarTipoM").tap(function (){
+		//alert("Eliminar ID tipo mascota");
+		var id=$("#txtIDTipoMascotas").val();
+		if(id==''){
+			alert("El ID para eliminar no es valido.");
+		}else{
+			$.ajax({
+				type:"POST",
+				url:"EliminarIDTipoMasc.php",
+				data:"IDTipM="+id,
+				success:function (datos) {
+					alert("El ID: "+id+" a sido eliminado"+datos);
+					$("#txtIDTipoMascotas").val("");
+				}
+			});
+		}
+	});
+}
+function obtenerUbicacion(){//Funcion que obtiene la Ubicación del dispositivo móvil
+	if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(exito, falla, opciones);
+
+	  function exito(posic){	  	
+	      $("#Latitud").val(posic.coords.latitude);
+	      $("#Longitud").val(posic.coords.longitude);	         
+	     }
+
+	      function falla(error){
+	         alert("Error en el servicio Geolocalizador: "+error.code+" detalle: "+error.response);
+	      }
+	  }else{
+	      alert("Su dispositivo no soporta la geolocalización o no esta habilitada esta funcionalidad");
+	  }
+    }
+function obtenerUbicacionMod(){//Funcion que obtiene la Ubicación del dispositivo móvil
+	if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(exito, falla, opciones);
+
+	  function exito(posic){	  	
+	      $("#Latitud02").val(posic.coords.latitude);
+	      $("#Longitud02").val(posic.coords.longitude);	         
+	     }
+
+	      function falla(error){
+	         alert("Error en el servicio Geolocalizador: "+error.code+" detalle: "+error.response);
+	      }
+	  }else{
+	      alert("Su dispositivo no soporta la geolocalización o no esta habilitada esta funcionalidad");
+	  }
+    }
+function uploadPhoto(fileURL) {
+	//alert("si entro para subir foto: "+fileURL);
+	var win = function (r) {
+    alert("Foto enviada correctamente: Codigo = " + r.responseCode+" Respuesta = " + r.response+" Enviados = " + r.bytesSent);
+	}
+	var fail = function (error) {
+	  alert("A ocurrido un error: Código = " + error.code+ " Recurso: "+ error.source+" Error al subir target " + error.target);
+	}
+	var options = new FileUploadOptions();
+	options.fileKey = "imagen";
+	options.fileName = $("#NombreMasc").val();
+	options.mimeType="image/jpeg";
+
+	var params = {};
+	params.value1 = "test";
+	params.value2 = "param";
+	options.params = params;
+
+	var ft = new FileTransfer();
+	ft.upload(fileURL, encodeURI("http://iscitslibres.com/iscmoviles/Alejandro/subirArchivo.php"), win, fail, options);
+}
+function llenarTipoAnimales(){
+	//alert("Entro al metodo");
+	$.ajax({
+		type:"POST",
+		url:"ConsultaTipMasc.php",
+		data:"",
+		success:function (datos) {
+			var reg=$.parseJSON(datos);
+			if(reg.length=="0"){
+				alert("Se recomienda registrar un tipo de animal");
+			}else{
+			var opciones=$("#Clasificacion");
+			var opcion2=$("#Clasificacion02");
+			opciones.html("<option value='0'</option>--Selecciona una opción--</option>");
+			opcion2.html("<option value='0'</option>--Selecciona una opción--</option>");
+			 for(var i in reg){
+			 	opciones.append("<option value='"+reg[i].IDTipo+"'</option>"+reg[i].Tipo+"</option>");
+			 	opcion2.append("<option value='"+reg[i].IDTipo+"'</option>"+reg[i].Tipo+"</option>");
+			 }
+			}
+		}
+	});
+}
+function llenarcoordenadas(){
+	//alert("Entro al metodo");
+	$.ajax({
+		type:"POST",
+		url:"ConsultaCoorMasc.php",
+		data:"",
+		success:function (datos) {
+			var reg=$.parseJSON(datos);
+			var datosCoor="";
+			if(reg.length=="0"){
+				alert("No hay macotas registradas");
+			}else{
+			$("#InfoCoor").val("");
+			 for(var i in reg){
+			 	datosCoor=datosCoor+reg[i].ID+": "+reg[i].Latitud+" , "+reg[i].Longitud+" ";
+			 }
+			 $("#InfoCoor").val(""+datosCoor);
+			}
+		}
+	});
+}
+function LimpCampos(){
+	$("#NombreMasc").val("");
+	$("#ViveMasc").val("");
+	$("#RazaMasc").val("");
+	$("#ColorMasc").val("");
+	$("#PrecioMasc").val("");
+	$("#FechaNas").val("");
+	$("#PedegreMasc").val("");
+	$("#SexoMasc").val("");
+	$("#PesoMasc").val("");
+	$("#DescripMasc").val("");
+	$("#EstMasc").val("");
+	$("#Latitud").val("");
+	$("#Longitud").val("");
+	$("#Clasificacion").val("0").change();
+	alert("Limpiesa 01")
+}
+function LimpCampos02(){
+	$("#NombreMasc02").val("");
+	$("#ViveMasc02").val("");
+	$("#RazaMasc02").val("");
+	$("#ColorMasc02").val("");
+	$("#PrecioMasc02").val("");
+	$("#FechaNas02").val("");
+	$("#PedegreMasc02").val("");
+	$("#SexoMasc02").val("");
+	$("#PesoMasc02").val("");
+	$("#DescripMasc02").val("");
+	$("#EstMasc02").val("");
+	$("#Latitud02").val("");
+	$("#Longitud02").val("");
+	$("#txtNMascotasMod").val("");
+	$("#Clasificacion02").val("0").change();
+	alert("Limpiesa 02")
+}
+</script>
+	<style type="text/css">
+	#ConsultarMapa, #map-canvas { width: 100%; height: 100%; padding: 0; }
+	/*
+	   div [data-role='content']{
+	    	background:url('img/Foto3.jpg');
+			width:100%;
+			height: 100%
+	    }
+		body{
+			background:url('img/Foto3.jpg');
+			width:100%;
+			height: 100%
+		}
+		*/
+		#Principal{
+			background:url('img/Foto3.jpg');
+			width:100%;
+			height: 100%
+		}
+		#Mascotas{
+			background:url('img/Foto3.jpg');
+			width:100%;
+			height: 100%
+		}
+		#RegistrarMascotas{
+			background:url('img/Foto3.jpg');
+			width:100%;
+			height: 100%
+		}
+		#ConsultarMascotas{
+			background:url('img/Foto3.jpg');
+			width:100%;
+			height: 100%
+		}
+		#ModificarMasc{
+			background:url('img/Foto3.jpg');
+			width:100%;
+			height: 100%
+		}
+		#RegistrarTipMascotas{
+			background:url('img/Foto3.jpg');
+			width:100%;
+			height: 100%
+		}
+		#ConsultarTipoMascotas{
+			background:url('img/Foto3.jpg');
+			width:100%;
+			height: 100%
+		}
+		#cavecera{
+			color:white;
+			background-color: blue;
+		}
+		#pie{
+			background-color: blue;
+		}
+		p{
+			text-align: center;
+			font-weight: bold;
+		}
+		td{
+			color: #524545;
+			background-color: #CCC;
+			font-weight: bold;
+		}
+		th{
+			color: white;
+			background-color: black;
+			font-weight: bold;
+		}
+		#ModMasc{
+			display: none;
+		}
+	</style>
+</head>
+<body>
+	<div data-role="page" id="Principal">
+		<div data-role="header" id="cavecera">
+			<p>VETERINARIA DE MASCOTAS</p>
+		</div>	
+		<div data-role="content">
+			<ul data-role="listview">
+				<li><a href="#Mascotas" data-transition="flip">MASCOTAS</a></li>	
+				<li><a href="#Clientes" data-transition="flip">CLIENTES</a></li>
+			</ul>	
+			<img src="img/mascotas.jpg" width="90%">
+		</div>
+		<div data-role="footer" data-position="fixed" id="pie">
+			<p><input type="button" value="Salir" onclick="self.close();" onkeypress="self.close();"></p>
+		</div>
+	</div>
+	<div data-role="page" id="Mascotas">
+		<div data-role="header" id="cavecera">
+			<p>MASCOTAS .....</p>
+		</div>	
+		<div data-role="content">
+			<ul data-role="listview">
+				<li><a href="#RegistrarMascotas" data-transition="slide">Registrar mascotas</a></li>
+				<li><a href="#ConsultarMascotas" data-transition="slide">Operaciones sobre mascotas</a></li>
+				<li><a href="#RegistrarTipMascotas" data-transition="slide">Registrar Tipo de mascotas</a></li>
+				<li><a href="#ConsultarTipoMascotas" data-transition="slide">Operaciones sobre Tipo de mascotas</a></li>
+			</ul>	
+		</div>
+		<div data-role="footer" data-position="fixed" id="pie">
+			<p><a href="#Principal" class="ui-btn ui-icon-home ui-btn-icon-left" data-transition="flip" data-direction="reverse">Regresar</a></p>
+		</div>
+	</div>
+	<div data-role="page" id="Clientes">
+		<div data-role="header" id="cavecera">
+			<p>CLIENTES .....</p>
+		</div>	
+		<div data-role="content">
+			<ul data-role="listview">
+				<li><a href="#RegistrarClientes" data-transition="slide">Registrar clientes</a></li>	
+				<li><a href="#ConsultarClientes" data-transition="slide">Consultar clientes</a></li>
+			</ul>	
+		</div>
+		<div data-role="footer" data-position="fixed" id="pie">
+			<p><a href="#Principal" class="ui-btn ui-icon-home ui-btn-icon-left" data-transition="flip" data-direction="reverse">Regresar</a></p>
+		</div>
+	</div>
+	<!-- TABLA MASCOTAS -->
+	<div data-role="page" id="RegistrarMascotas">
+		<div data-role="header" id="cavecera">
+			<p>RESGISTRAR MASCOTAS</p>
+		</div>	
+		<div data-role="content">
+			<input type="text" id="NombreMasc" placeholder="Nombre de la Mascota">
+			<select id="ViveMasc">
+				<option value="NA">--SELECCIONA LA MASCOTA VIVE--</option>
+				<option value="Si">Si</option>
+				<option value="No">No</option>
+			</select>
+			<input type="text" id="RazaMasc" placeholder="Raza de la Mascota">
+			<input type="text" id="ColorMasc" placeholder="Color de la Mascota">
+			<input type="text" id="PrecioMasc" placeholder="Precio de la Mascota">
+			<input type="date" id="FechaNas" step="1" min="2010-01-01" max="2020-12-31" value="2017-05-18">
+			<input type="text" id="PedegreMasc" placeholder="Pedegre de la mascota">
+			<select id="SexoMasc">
+				<option value="NA">--SELECCIONA SEXO DE LA MASCOTA--</option>
+				<option value="Macho">Macho</option>
+				<option value="Hembra">Hembra</option>
+			</select>
+			<input type="text" id="PesoMasc" placeholder="Peso de la Mascota">
+			<input type="text" id="DescripMasc" placeholder="Descripcion de la Mascota">
+			<input type="text" id="EstMasc" placeholder="Estado de la Mascota">
+			<input type="button" id="btnobtenerFoto" value="Tomar Foto">
+			<img id="regFoto" src="" >	
+			<input type="button" id="btnObtCordenadas" value="Obtener coordenadas">
+			<input type="text" id="Latitud" placeholder="Latitud">
+			<input type="text" id="Longitud" placeholder="longitud">
+			<select id="Clasificacion">
+				<option value="0">--SELECCIONA TIPO DE ANIMAL--</option>
+			</select>			
+			<input type="button" id="btnGuardarMasc" value="Guardar mascota">
+		</div>
+		<div data-role="footer" data-position="fixed" id="pie">
+			<p><a href="#Mascotas" class="ui-btn ui-icon-home ui-btn-icon-left"  data-transition="slide" data-direction="reverse">Regresar</a></p>
+		</div>
+	</div>
+	<div data-role="page" id="ConsultarMascotas">
+		<div data-role="header" id="cavecera">
+			<p>CONSULTAR MASCOTAS</p>
+		</div>	
+		<div data-role="content">
+			<br>
+			<ul data-role="listview">
+				<li><a href="#ConsultarMapa">Abrir el mapa</a></li>
+			</ul>
+			<br>
+			<input type="button" id="btnConsultarMasc" value="Consultar Todas las mascotas">
+			<table data-role="table" data-mode="columntoggle" class="ui-responsive" id="mascotas">
+				<thead>
+					<tr>
+						<th data-priority="1">Id</th>
+						<th data-priority="2">Nombre</th>
+						<th data-priority="3">Vive</th>
+						<th data-priority="4">Raza</th>
+						<th data-priority="5">Color</th>
+						<th data-priority="6">Precio</th>
+						<th data-priority="7">FNacimiento</th>
+						<th data-priority="8">Pedegre</th>
+						<th data-priority="9">Sexo</th>
+						<th data-priority="10">Peso</th>
+						<th data-priority="11">Descripcion</th>
+						<th data-priority="12">Foto</th>
+						<th data-priority="13">Latitud</th>
+						<th data-priority="14">Longitud</th>
+					</tr>
+				</thead  >				
+				<tbody id="datosTodos">				
+				</tbody>
+			</table>
+			<div>
+			<input type="text" id="txtMascotasID" placeholder="Escribe el ID de la mascota">
+			<input type="button" id="btnConsultarIDM" value="Consultar Mascota">
+			<br>
+			<ul data-role="listview">
+				<li><a href="#ModificarMasc" data-transition="slideup" >Modificar Mascota</a></li>
+			</ul>
+			<br>
+			</div>
+		</div>
+		<div data-role="footer" data-position="fixed" id="pie">
+			<p><a href="#Mascotas" class="ui-btn ui-icon-home ui-btn-icon-left" data-transition="slide" data-direction="reverse">Regresar</a></p>
+		</div>
+	</div>
+	<div data-role="page" id="ModificarMasc">
+		<div data-role="header" id="cavecera">
+			<p>MODIFICAR MASCOTA</p>
+		</div>
+		<div data-role="content" >
+			<input type="text" id="txtNMascotasMod" placeholder="Escribe el nombre de la mascota">
+			<input type="button" id="btnConsultarNomM" value="Consultar Mascota">
+			<div id="ModMasc">			
+			<input type="text" id="IdMasc02" placeholder="Nombre de la Mascota">
+			<input type="text" id="NombreMasc02" placeholder="Nombre de la Mascota">
+			<select id="ViveMasc02">
+				<option value="NA">--SELECCIONA LA MASCOTA VIVE--</option>
+				<option value="Si">Si</option>
+				<option value="No">No</option>
+			</select>
+			<input type="text" id="RazaMasc02" placeholder="Raza de la Mascota">
+			<input type="text" id="ColorMasc02" placeholder="Color de la Mascota">
+			<input type="text" id="PrecioMasc02" placeholder="Precio de la Mascota">
+			<input type="date" id="FechaNas02" step="1" min="2010-01-01" max="2020-12-31" value="2017-05-18">
+			<input type="text" id="PedegreMasc02" placeholder="Pedegre de la mascota">
+			<select id="SexoMasc02">
+				<option value="NA">--SELECCIONA SEXO DE LA MASCOTA--</option>
+				<option value="Macho">Macho</option>
+				<option value="Hembra">Hembra</option>
+			</select>
+			<input type="text" id="PesoMasc02" placeholder="Peso de la Mascota">
+			<input type="text" id="DescripMasc02" placeholder="Descripcion de la Mascota">
+			<input type="text" id="EstMasc02" placeholder="Estado de la Mascota">
+			<input type="button" id="btnobtenerFoto" value="Tomar Foto">
+			<img id="regFoto2" src="" >	
+			<input type="button" id="btnObtCordenadasMod" value="Obtener coordenadas">
+			<input type="text" id="Latitud02" placeholder="Latitud">
+			<input type="text" id="Longitud02" placeholder="longitud">
+			<select id="Clasificacion02">
+				<option value="0">--SELECCIONA TIPO DE ANIMAL--</option>
+			</select>			
+			<input type="button" id="btnModificarM" value="Modificar Mascota">
+			</div>
+		</div>
+		<div data-role="footer" data-position="fixed" id="pie">
+			<p><a href="#ConsultarMascotas" class="ui-btn ui-icon-home ui-btn-icon-left" data-transition="slidedown">Regresar</a></p>
+		</div>
+</div>
+	<div data-role="page" id="ConsultarMapa" data-url="map-page">
+      <div data-role="header" >
+			<h1>Ubicación de las mascotas</h1>
+      </div>
+      <div role="main" class="ui-content" id="map-canvas">
+      <!-- map loads here... -->
+      </div>
+      <div data-role="footer" data-position="fixed" style="text-align: center;">
+		<div data-role="controlgroup" data-type="horizontal">
+		<a href="#Principal" class="ui-btn ui-icon-home ui-btn-icon-left">Regresar</a>
+		<a href="#" class="ui-btn ui-icon-search ui-btn-icon-left" id="btnConsServMapa">Abrir Mapa</a>
+		</div>
+      </div>
+</div> 
+	<!-- TABLA TIPO MASCOTAS -->
+	<div data-role="page" id="RegistrarTipMascotas">
+		<div data-role="header" id="cavecera">
+			<p>REGISTRAR TIPO DE MASCOTA</p>
+		</div>
+		<div data-role="content">	
+		<input type="text" id="TipoAMasc" placeholder="Tipo de animal">
+		<input type="button" id="btnGuardarTipMasc" value="Guardar tipo mascota">		
+		</div>
+		<div data-role="footer" data-position="fixed"id="pie">
+			<p><a href="#Mascotas" class="ui-btn ui-icon-home ui-btn-icon-left" data-transition="slide" data-direction="reverse">Regresar</a></p>
+		</div>
+	</div>
+	<div data-role="page" id="ConsultarTipoMascotas">
+		<div data-role="header" id="cavecera">
+			<p>CONSULTAR TIPO DE MASCOTA</p>
+		</div>	
+		<div data-role="content">
+			<input type="button" id="btnConsultarTipMasc" value="Consultar los tipos">
+			<div>
+			<table data-role="table" data-mode="columntoggle" class="ui-responsive" id="datosTipoMasc">
+				<thead>
+					<tr>
+						<th data-priority="1">Id Nombre</th>
+						<th data-priority="2">Tipo</th>
+					</tr>
+				</thead>				
+				<tbody id="datosTipoTodos">
+				</tbody>
+			</table>
+			<input type="text" id="txtIDTipoMascotas" placeholder="Escribe el ID del Tipo a buscar">
+			<input type="button" id="btnConIDTipoMas" value="Consultar Tipo Mascota">
+			<input type="button" id="btnEliminarTipoM" value="Eliminar Tipo Mascota">
+			</div>
+		</div>
+		<div data-role="footer" data-position="fixed" id="pie">
+			<p><a href="#Mascotas" class="ui-btn ui-icon-home ui-btn-icon-left" data-transition="slide" data-direction="reverse">Regresar</a></p>
+		</div>
+	</div>
+	<!-- TABLA CLIENTES -->
+	<div data-role="page" id="RegistrarClientes">
+		<div data-role="header" id="cavecera">
+			<p>REGISTRAR CLIENTES</p>
+		</div>	
+		<div data-role="content">
+			<input type="text" id="NombreCliente" placeholder="Ingresa Nombre del Cliene">
+			<input type="text" id="Telefono" placeholder="Ingresa Numero de Telefono">
+			<input type="text" id="Precio" placeholder="Ingresa Direccion del Cliente">			
+			<input type="button" id="btnGuardarClient" value="Guardar cliente">
+		</div>
+		<div data-role="footer" data-position="fixed" id="pie">
+			<p><a href="#Clientes" class="ui-btn ui-icon-home ui-btn-icon-left">Regresar</a></p>
+		</div>
+	</div>
+	<div data-role="page" id="ConsultarClientes">
+		<div data-role="header" id="cavecera">
+			<p>CONSULTAR CLIENTES</p>
+		</div>	
+		<div data-role="content">
+			<input type="button" value="Consultar Todos los clientes">
+			<div>
+			<table data-role="table" id="btnConsultarTodo2" data-mode="columntoggle" class="ui-responsive" >
+				<thead id="datosTodos2">
+					<tr>
+						<th data-priority="1">Id Clientes</th>
+						<th data-priority="2">Nombre</th>
+						<th data-priority="3">Telefono</th>
+						<th data-priority="4">Direccion</th>
+					</tr>
+				</thead id="datosTodos2">				
+				<tbody id="datosID2">
+				</tbody>
+			</table>
+			<input type="text" id="txtCliente" placeholder="Escribe el ID del cliente">
+			<input type="button" id="btnConsultarC" value="Consultar Cliente">
+			<input type="button" id="btnEliminarC" value="Eliminar Cliente">
+			</div>
+		</div>
+		<div data-role="footer" data-position="fixed" id="pie">
+			<p><a href="#Clientes" class="ui-btn ui-icon-home ui-btn-icon-left">Regresar</a></p>
+		</div>
+	</div>
+</body>
+</html>
